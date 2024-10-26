@@ -105,7 +105,7 @@ def generate_training_data(model_name, dataset_id, n_trials=25, n_initial_points
             "metric": "accuracy",
             "dataset_info": dataset_info,
             "current_step": i,
-            "optimization_history": optimization_history[:i+1],  # Include all previous steps up to current
+            "optimization_history": optimization_history[:i],  # Include all previous steps up to current
             "current_hyperparameters": config,
             "current_performance": result,
         }
