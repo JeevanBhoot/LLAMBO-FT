@@ -42,7 +42,7 @@ echo $OPENAI_API_TYPE
 4. Set up Conda environment:
 ```
 git clone https://github.com/tennisonliu/llambo.git
-conda create -n llambo python=3.8.8
+conda create -n llambo python=3.10.0
 conda install jupyter
 conda activate llambo
 ## Note: {project_dir} is the path to where to your local directory
