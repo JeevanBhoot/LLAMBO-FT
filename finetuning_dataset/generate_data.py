@@ -2,6 +2,7 @@ import os
 import json
 import openml
 from hpobench.benchmarks.ml import RandomForestBenchmark, NNBenchmark, XGBoostBenchmark
+from finetuning_dataset.xgb_benchmark import CustomXGBoostBenchmark
 from bayes_opt import BayesianOptimization
 
 
@@ -12,9 +13,9 @@ MODEL_NAME_MAP = {
 }
 
 MODEL_BENCHMARK_MAP = {
-    "rf": RandomForestBenchmark,
-    "nn": NNBenchmark,
-    "xgb": XGBoostBenchmark,
+    # "rf": RandomForestBenchmark,
+    # "nn": NNBenchmark,
+    "xgb": CustomXGBoostBenchmark,
 }
 
 DATASET_MAP = {
@@ -59,46 +60,27 @@ def get_dataset_info(dataset_id):
     }
 
 
-def get_metrics(benchmark, config, model_name):
-    if model_name == "rf":
-        benchmark_info = benchmark.objective_function({
-            **config,
-            'max_depth': round(config['max_depth']),
-            'min_samples_split': round(config['min_samples_split']),
-            'min_samples_leaf': round(config['min_samples_leaf'])
-        })["info"]
-    elif model_name == "nn":
-        benchmark_info = benchmark.objective_function({
-            **config,
-            'depth': round(config['depth']),
-            'width': round(config['width']),
-            'batch_size': round(config['batch_size'])
-        })["info"]
-    elif model_name == "xgb":
-        benchmark_info = benchmark.objective_function({
-            **config,
-            'max_depth': round(config['max_depth'])
-        })["info"]
-    else:
-        benchmark_info = benchmark.objective_function(config)["info"]
-    
-    balanced_accuracy = benchmark_info["val_scores"].get("balanced_accuracy", None)
-    f1 = benchmark_info["val_scores"].get("f1", None)
-    precision = benchmark_info["val_scores"].get("precision", None)
-    return balanced_accuracy, f1, precision
-
-
 def hyps_to_int(config: dict, model_name: str):
-    if model_name == "rf":
-        config['max_depth'] = round(config['max_depth'])
-        config['min_samples_split'] = round(config['min_samples_split'])
-        config['min_samples_leaf'] = round(config['min_samples_leaf'])
-    elif model_name == "nn":
-        config['depth'] = round(config['depth'])
-        config['width'] = round(config['width'])
-        config['batch_size'] = round(config['batch_size'])
-    elif model_name == "xgb":
-        config['max_depth'] = round(config['max_depth'])
+    """Round hyperparameters to ints."""
+    rounding_keys = {
+        "rf": ["max_depth", "min_samples_split", "min_samples_leaf"],
+        "nn": ["depth", "width", "batch_size"],
+        "xgb": ["max_depth"]
+    }
+    for key in rounding_keys.get(model_name, []):
+        config[key] = round(config[key])
+
+
+def evaluate_metrics(benchmark, config, model_name):
+    hyps_to_int(config, model_name)
+    benchmark_info = benchmark.objective_function(config)["info"]
+    val_scores = benchmark_info.get("val_scores", {})
+    return {
+        "accuracy": val_scores.get("acc"),
+        "balanced_accuracy": val_scores.get("balanced_accuracy"),
+        "f1_score": val_scores.get("f1"),
+        "precision": val_scores.get("precision")
+    }
 
 
 def generate_training_data(model_name, dataset_id, dataset_name, num_expts=5, n_trials=25, n_initial_points=5):
@@ -144,16 +126,11 @@ def generate_training_data(model_name, dataset_id, dataset_name, num_expts=5, n_
             hyps_to_int(config, model_name)
             result = trial["target"]
 
-            bal_acc, f1, precision = get_metrics(benchmark, config, model_name)
+            metrics = evaluate_metrics(benchmark, config, model_name)
 
             optimization_history.append({
                 "hyperparameters": config,
-                "performance": {
-                    "accuracy": result,
-                    "balanced_accuracy": bal_acc,
-                    "f1_score": f1,
-                    "precision": precision
-                }
+                "performance": metrics,
             })
 
             step_data = {
@@ -176,16 +153,11 @@ def generate_training_data(model_name, dataset_id, dataset_name, num_expts=5, n_
             hyps_to_int(config, model_name)
             result = trial["target"]
 
-            bal_acc, f1, precision = get_metrics(benchmark, config, model_name)
+            metrics = evaluate_metrics(benchmark, config, model_name)
 
             optimization_history.append({
                 "hyperparameters": config,
-                "performance": {
-                    "accuracy": result,
-                    "balanced_accuracy": bal_acc,
-                    "f1_score": f1,
-                    "precision": precision
-                }
+                "performance": metrics,
             })
             step_num = i + 1 - n_initial_points
             step_data = {
