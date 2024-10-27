@@ -36,8 +36,9 @@ HYPERPARAM_BOUNDS = {
 }
 
 # Directory to save training data
-save_res_dir = "training_data"
-os.makedirs(save_res_dir, exist_ok=True)
+data_dir = "training_data"
+os.makedirs(data_dir, exist_ok=True)
+
 
 def get_dataset_info(dataset_id):
     dataset = openml.datasets.get_dataset(dataset_id)
@@ -57,7 +58,28 @@ def get_dataset_info(dataset_id):
         "num_continuous_features": num_continuous_features,
     }
 
-def generate_training_data(model_name, dataset_id, n_trials=25, n_initial_points=5):
+
+def get_metrics(benchmark, config):
+    benchmark_info = benchmark.objective_function({
+        **config, 
+        "max_depth": int(config["max_depth"]),
+        "min_samples_split": int(config["min_samples_split"]),
+        "min_samples_leaf": int(config["min_samples_leaf"])
+    })["info"]
+    balanced_accuracy = benchmark_info["val_scores"].get("balanced_accuracy", None)
+    f1 = benchmark_info["val_scores"].get("f1", None)
+    precision = benchmark_info["val_scores"].get("precision", None)
+    return balanced_accuracy, f1, precision
+
+
+def hyps_to_int(config: dict):
+    config['max_depth'] = int(config['max_depth'])
+    config['min_samples_split'] = int(config['min_samples_split'])
+    config['min_samples_leaf'] = int(config['min_samples_leaf'])
+    return config
+
+
+def generate_training_data(model_name, dataset_id, dataset_name, n_trials=25, n_initial_points=5):
     # Get dataset information from OpenML
     dataset_info = get_dataset_info(dataset_id)
 
@@ -84,37 +106,73 @@ def generate_training_data(model_name, dataset_id, n_trials=25, n_initial_points
     # Run Bayesian Optimization with initial points and trials
     bo.maximize(init_points=n_initial_points, n_iter=n_trials)
 
-    # Collect and format data for full context
     optimization_history = []
-    for trial in bo.res:
-        config = trial["params"]
-        result = trial["target"]
-        optimization_history.append({"hyperparameters": config, "performance": result})
-
-
-
-    # Save detailed optimization history for each step
-    for i, trial in enumerate(bo.res):
-        config = trial["params"]
+    # Initial steps handled differently to future trials
+    for i in range(n_initial_points):
+        trial = bo.res[i]
+        config = hyps_to_int(trial["params"])
         result = trial["target"]
 
-        # Combine all information in a JSON file
+        bal_acc, f1, precision = get_metrics(benchmark, config)
+
+        optimization_history.append({
+            "hyperparameters": config,
+            "performance": {
+                "accuracy": result,
+                "balanced_accuracy": bal_acc,
+                "f1_score": f1,
+                "precision": precision
+            }
+        })
+
+        step_data = {
+            "model_name": MODEL_NAME_MAP[model_name],
+            "task": "Classification",  # hpo_bench datasets are all classification
+            "metric": "accuracy",
+            "dataset_info": dataset_info,
+            "current_step": 0,
+            "optimization_history": [], # empty for initial steps
+            "current_hyperparameters": config,
+            "current_performance": optimization_history[i]["performance"],
+        }
+        with open(f"{data_dir}/{dataset_name}/{model_name}/initial_step_{i}.json", "w") as f:
+            json.dump(step_data, f, indent=4)
+
+
+    for i in range(n_initial_points, len(bo.res)):
+        trial = bo.res[i]
+        config = hyps_to_int(trial["params"])
+        result = trial["target"]
+
+        bal_acc, f1, precision = get_metrics(benchmark, config)
+
+        optimization_history.append({
+            "hyperparameters": config,
+            "performance": {
+                "accuracy": result,
+                "balanced_accuracy": bal_acc,
+                "f1_score": f1,
+                "precision": precision
+            }
+        })
+        step_num = i +1 - n_initial_points
         step_data = {
             "model_name": MODEL_NAME_MAP[model_name],
             "task": "Classification",
             "metric": "accuracy",
             "dataset_info": dataset_info,
-            "current_step": i,
+            "current_step": step_num,
             "optimization_history": optimization_history[:i],  # Include all previous steps up to current
             "current_hyperparameters": config,
-            "current_performance": result,
+            "current_performance": optimization_history[i]["performance"],
         }
 
         # Save generated data to JSON file for each step
-        with open(f"{save_res_dir}/{model_name}_{dataset_id}_step_{i}.json", "w") as f:
+        with open(f"{data_dir}/{dataset_name}/{model_name}/step_{step_num}.json", "w") as f:
             json.dump(step_data, f, indent=4)
 
 # Run for all models and datasets
 for model in MODEL_BENCHMARK_MAP.keys():
     for dataset_name, dataset_id in DATASET_MAP.items():
-        generate_training_data(model, dataset_id)
+        os.makedirs(f"{data_dir}/{dataset_name}/{model}", exist_ok=True)
+        generate_training_data(model, dataset_id, dataset_name)
