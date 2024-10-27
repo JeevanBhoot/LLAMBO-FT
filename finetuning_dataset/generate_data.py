@@ -4,7 +4,7 @@ import openml
 from hpobench.benchmarks.ml import RandomForestBenchmark, NNBenchmark, XGBoostBenchmark
 from bayes_opt import BayesianOptimization
 
-# Map for models and their respective HPOBench classes
+
 MODEL_NAME_MAP = {
     "rf": "Random Forest",
     "nn": "Neural Network (Multi-Layer Perceptron)",
@@ -13,8 +13,8 @@ MODEL_NAME_MAP = {
 
 MODEL_BENCHMARK_MAP = {
     "rf": RandomForestBenchmark,
-    # "nn": NNBenchmark,
-    # "xgb": XGBoostBenchmark,
+    "nn": NNBenchmark,
+    "xgb": XGBoostBenchmark,
 }
 
 DATASET_MAP = {
@@ -28,11 +28,11 @@ DATASET_MAP = {
     # "segment": 146822,
 }
 
-# Define hyperparameter bounds for each model (example bounds for simplicity)
+# Define hyperparameter bounds for each model
 HYPERPARAM_BOUNDS = {
     "rf": {"max_depth": (1, 50), "min_samples_split": (2, 128), "max_features": (0, 1.0), "min_samples_leaf": (1, 20)},
-    # "nn": {"learning_rate": (0.0001, 0.1), "batch_size": (16, 128), "n_units": (10, 100)},
-    # "xgb": {"max_depth": (1, 10), "n_estimators": (10, 200), "learning_rate": (0.01, 0.3)}
+    "nn": {"depth": (1, 3), "width": (16, 1024), "batch_size": (4, 256), "alpha": (1e-8, 1.0), "learning_rate_init": (1e-5, 1.0)},
+    "xgb": {"eta": (2**-10, 1.0), "max_depth": (1, 50), "colsample_bytree": (0.1, 1.0), "reg_lambda": (2**-10, 2**10)},
 }
 
 # Directory to save training data
@@ -59,23 +59,46 @@ def get_dataset_info(dataset_id):
     }
 
 
-def get_metrics(benchmark, config):
-    benchmark_info = benchmark.objective_function({
-        **config, 
-        "max_depth": int(config["max_depth"]),
-        "min_samples_split": int(config["min_samples_split"]),
-        "min_samples_leaf": int(config["min_samples_leaf"])
-    })["info"]
+def get_metrics(benchmark, config, model_name):
+    if model_name == "rf":
+        benchmark_info = benchmark.objective_function({
+            **config,
+            'max_depth': round(config['max_depth']),
+            'min_samples_split': round(config['min_samples_split']),
+            'min_samples_leaf': round(config['min_samples_leaf'])
+        })["info"]
+    elif model_name == "nn":
+        benchmark_info = benchmark.objective_function({
+            **config,
+            'depth': round(config['depth']),
+            'width': round(config['width']),
+            'batch_size': round(config['batch_size'])
+        })["info"]
+    elif model_name == "xgb":
+        benchmark_info = benchmark.objective_function({
+            **config,
+            'max_depth': round(config['max_depth'])
+        })["info"]
+    else:
+        benchmark_info = benchmark.objective_function(config)["info"]
+    
     balanced_accuracy = benchmark_info["val_scores"].get("balanced_accuracy", None)
     f1 = benchmark_info["val_scores"].get("f1", None)
     precision = benchmark_info["val_scores"].get("precision", None)
     return balanced_accuracy, f1, precision
 
 
-def hyps_to_int(config: dict):
-    config['max_depth'] = int(config['max_depth'])
-    config['min_samples_split'] = int(config['min_samples_split'])
-    config['min_samples_leaf'] = int(config['min_samples_leaf'])
+def hyps_to_int(config: dict, model_name: str):
+    if model_name == "rf":
+        config['max_depth'] = round(config['max_depth'])
+        config['min_samples_split'] = round(config['min_samples_split'])
+        config['min_samples_leaf'] = round(config['min_samples_leaf'])
+    elif model_name == "nn":
+        config['depth'] = round(config['depth'])
+        config['width'] = round(config['width'])
+        config['batch_size'] = round(config['batch_size'])
+    elif model_name == "xgb":
+        config['max_depth'] = round(config['max_depth'])
 
 
 def generate_training_data(model_name, dataset_id, dataset_name, num_expts=5, n_trials=25, n_initial_points=5):
@@ -90,16 +113,22 @@ def generate_training_data(model_name, dataset_id, dataset_name, num_expts=5, n_
 
     for j in range(num_expts):
         os.makedirs(f"{data_dir}/{dataset_name}/{model_name}/exp0{j+1}", exist_ok=True)
-        # Define Bayesian Optimization process
+
         bo = BayesianOptimization(
-            f=lambda **params: benchmark.objective_function(
-                {
-                    **params, 
-                    "max_depth": int(params["max_depth"]),
-                    "min_samples_split": int(params["min_samples_split"]),
-                    "min_samples_leaf": int(params["min_samples_leaf"])
-                }
-            )["info"]["val_scores"]["acc"],
+            f=lambda **params: benchmark.objective_function({
+                **params,
+                **({
+                    'max_depth': round(params['max_depth']),
+                    'min_samples_split': round(params['min_samples_split']),
+                    'min_samples_leaf': round(params['min_samples_leaf'])
+                } if model_name == 'rf' else {
+                    'depth': round(params['depth']),
+                    'width': round(params['width']),
+                    'batch_size': round(params['batch_size'])
+                } if model_name == 'nn' else {
+                    'max_depth': round(params['max_depth'])
+                })
+            })["info"]["val_scores"]["acc"],
             pbounds=pbounds,
             verbose=2,
         )
@@ -112,10 +141,10 @@ def generate_training_data(model_name, dataset_id, dataset_name, num_expts=5, n_
         for i in range(n_initial_points):
             trial = bo.res[i]
             config = trial["params"]
-            hyps_to_int(config)
+            hyps_to_int(config, model_name)
             result = trial["target"]
 
-            bal_acc, f1, precision = get_metrics(benchmark, config)
+            bal_acc, f1, precision = get_metrics(benchmark, config, model_name)
 
             optimization_history.append({
                 "hyperparameters": config,
@@ -144,10 +173,10 @@ def generate_training_data(model_name, dataset_id, dataset_name, num_expts=5, n_
         for i in range(n_initial_points, len(bo.res)):
             trial = bo.res[i]
             config = trial["params"]
-            hyps_to_int(config)
+            hyps_to_int(config, model_name)
             result = trial["target"]
 
-            bal_acc, f1, precision = get_metrics(benchmark, config)
+            bal_acc, f1, precision = get_metrics(benchmark, config, model_name)
 
             optimization_history.append({
                 "hyperparameters": config,
