@@ -13,20 +13,20 @@ MODEL_NAME_MAP = {
 }
 
 MODEL_BENCHMARK_MAP = {
-    # "rf": RandomForestBenchmark,
-    # "nn": NNBenchmark,
+    "rf": RandomForestBenchmark,
+    "nn": NNBenchmark,
     "xgb": CustomXGBoostBenchmark,
 }
 
 DATASET_MAP = {
     "credit_g": 31,
-    # "vehicle": 53,
-    # "kc1": 3917,
-    # "phoneme": 9952,
-    # "blood_transfusion": 10101,
-    # "australian": 146818,
-    # "car": 146821,
-    # "segment": 146822,
+    "vehicle": 53,
+    "kc1": 3917,
+    "phoneme": 9952,
+    "blood_transfusion": 10101,
+    "australian": 146818,
+    "car": 146821,
+    "segment": 146822,
 }
 
 # Define hyperparameter bounds for each model
@@ -36,13 +36,12 @@ HYPERPARAM_BOUNDS = {
     "xgb": {"eta": (2**-10, 1.0), "max_depth": (1, 50), "colsample_bytree": (0.1, 1.0), "reg_lambda": (2**-10, 2**10)},
 }
 
-# Directory to save training data
-data_dir = "training_data"
-os.makedirs(data_dir, exist_ok=True)
+DATA_DIR = "training_data"
 
 
-def get_dataset_info(dataset_id):
-    dataset = openml.datasets.get_dataset(dataset_id)
+def get_dataset_info(task_id):
+    task = openml.tasks.get_task(task_id)
+    dataset = openml.datasets.get_dataset(task.dataset_id)
     labels = dataset.retrieve_class_labels()
     X, _, categorical_mask, _= dataset.get_data()
 
@@ -83,18 +82,18 @@ def evaluate_metrics(benchmark, config, model_name):
     }
 
 
-def generate_training_data(model_name, dataset_id, dataset_name, num_expts=5, n_trials=25, n_initial_points=5):
+def generate_training_data(model_name, task_id, dataset_name, num_expts=5, n_trials=25, n_initial_points=5):
     # Get dataset information from OpenML
-    dataset_info = get_dataset_info(dataset_id)
+    dataset_info = get_dataset_info(task_id)
 
     # Initialize benchmark for the specific model and dataset
     benchmark_class = MODEL_BENCHMARK_MAP[model_name]
-    benchmark = benchmark_class(task_id=dataset_id)
+    benchmark = benchmark_class(task_id=task_id)
     # Define search space based on model
     pbounds = HYPERPARAM_BOUNDS[model_name]
 
     for j in range(num_expts):
-        os.makedirs(f"{data_dir}/{dataset_name}/{model_name}/exp0{j+1}", exist_ok=True)
+        os.makedirs(f"{DATA_DIR}/{dataset_name}/{model_name}/exp0{j+1}", exist_ok=True)
 
         bo = BayesianOptimization(
             f=lambda **params: benchmark.objective_function({
@@ -143,7 +142,7 @@ def generate_training_data(model_name, dataset_id, dataset_name, num_expts=5, n_
                 "current_hyperparameters": config,
                 "current_performance": optimization_history[i]["performance"],
             }
-            with open(f"{data_dir}/{dataset_name}/{model_name}/exp0{j+1}/initial_step_{i}.json", "w") as f:
+            with open(f"{DATA_DIR}/{dataset_name}/{model_name}/exp0{j+1}/initial_step_{i}.json", "w") as f:
                 json.dump(step_data, f, indent=4)
 
         # Save jsons for steps after initial points
@@ -172,11 +171,12 @@ def generate_training_data(model_name, dataset_id, dataset_name, num_expts=5, n_
             }
 
             # Save generated data to JSON file for each step
-            with open(f"{data_dir}/{dataset_name}/{model_name}/exp0{j+1}/step_{step_num}.json", "w") as f:
+            with open(f"{DATA_DIR}/{dataset_name}/{model_name}/exp0{j+1}/step_{step_num}.json", "w") as f:
                 json.dump(step_data, f, indent=4)
 
-# Run for all models and datasets
-for model in MODEL_BENCHMARK_MAP.keys():
-    for dataset_name, dataset_id in DATASET_MAP.items():
-        os.makedirs(f"{data_dir}/{dataset_name}/{model}", exist_ok=True)
-        generate_training_data(model, dataset_id, dataset_name)
+
+if __name__ == "__main__":
+    for dataset_name, task_id in DATASET_MAP.items():
+        for model in MODEL_BENCHMARK_MAP.keys():
+            os.makedirs(f"{DATA_DIR}/{dataset_name}/{model}", exist_ok=True)
+            generate_training_data(model, task_id, dataset_name)
