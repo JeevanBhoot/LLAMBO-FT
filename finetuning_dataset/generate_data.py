@@ -36,27 +36,7 @@ HYPERPARAM_BOUNDS = {
     "xgb": {"eta": (2**-10, 1.0), "max_depth": (1, 50), "colsample_bytree": (0.1, 1.0), "reg_lambda": (2**-10, 2**10)},
 }
 
-DATA_DIR = "training_data"
-
-
-def get_dataset_info(task_id):
-    task = openml.tasks.get_task(task_id)
-    dataset = openml.datasets.get_dataset(task.dataset_id)
-    labels = dataset.retrieve_class_labels()
-    X, _, categorical_mask, _= dataset.get_data()
-
-    num_features = X.shape[1]
-    num_categorical_features = sum(categorical_mask)
-    num_continuous_features = num_features - num_categorical_features
-
-    return {
-        "dataset_name": dataset.name,
-        "num_classes": len(labels) if labels else 0,
-        "num_samples": X.shape[0],
-        "num_features": num_features,
-        "num_categorical_features": num_categorical_features,
-        "num_continuous_features": num_continuous_features,
-    }
+DATA_DIR = "training_data_new"
 
 
 def hyps_to_int(config: dict, model_name: str):
@@ -83,9 +63,6 @@ def evaluate_metrics(benchmark, config, model_name):
 
 
 def generate_training_data(model_name, task_id, dataset_name, num_expts=5, n_trials=25, n_initial_points=5):
-    # Get dataset information from OpenML
-    dataset_info = get_dataset_info(task_id)
-
     # Initialize benchmark for the specific model and dataset
     benchmark_class = MODEL_BENCHMARK_MAP[model_name]
     benchmark = benchmark_class(task_id=task_id)
@@ -136,7 +113,6 @@ def generate_training_data(model_name, task_id, dataset_name, num_expts=5, n_tri
                 "model_name": MODEL_NAME_MAP[model_name],
                 "task": "Classification",  # hpo_bench datasets are all classification
                 "metric": "accuracy",
-                "dataset_info": dataset_info,
                 "current_step": 0,
                 "optimization_history": [], # empty for initial steps
                 "current_hyperparameters": config,
@@ -163,7 +139,6 @@ def generate_training_data(model_name, task_id, dataset_name, num_expts=5, n_tri
                 "model_name": MODEL_NAME_MAP[model_name],
                 "task": "Classification",
                 "metric": "accuracy",
-                "dataset_info": dataset_info,
                 "current_step": step_num,
                 "optimization_history": optimization_history[:i],  # Include all previous steps up to current
                 "current_hyperparameters": config,
