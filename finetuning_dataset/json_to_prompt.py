@@ -2,11 +2,13 @@ import os
 import json
 import csv
 
+
 HYPERPARAM_BOUNDS = {
     "rf": {"max_depth": (1, 50), "min_samples_split": (2, 128), "max_features": (0, 1.0), "min_samples_leaf": (1, 20)},
     "nn": {"depth": (1, 3), "width": (16, 1024), "batch_size": (4, 256), "alpha": (1e-8, 1.0), "learning_rate_init": (1e-5, 1.0)},
     "xgb": {"eta": (2**-10, 1.0), "max_depth": (1, 50), "colsample_bytree": (0.1, 1.0), "reg_lambda": (2**-10, 2**10)},
 }
+
 
 def extract_discriminative_prompt(json_data, dataset_info, model_tag):
     model_name = json_data["model_name"]
@@ -34,6 +36,7 @@ def extract_discriminative_prompt(json_data, dataset_info, model_tag):
         return prompt, response
     else:
         return None, None
+
 
 def extract_candidate_sampling_prompt(json_data, dataset_info, model_tag):
     model_name = json_data["model_name"]
@@ -64,6 +67,7 @@ def extract_candidate_sampling_prompt(json_data, dataset_info, model_tag):
         return prompt, response
     else:
         return None, None
+
 
 def generate_prompts(data_dir, dataset_info_dir, output_folder):
     os.makedirs(output_folder, exist_ok=True)
