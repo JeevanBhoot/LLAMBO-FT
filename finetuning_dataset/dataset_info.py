@@ -4,6 +4,7 @@ import openml
 import numpy as np
 import pandas as pd
 from collections import Counter
+from finetuning_dataset.utils import DATASET_MAP
 
 
 def get_dataset_info(task_id):
@@ -73,16 +74,7 @@ def generate_dataset_info(data_dir):
 
         print(f"Dataset information saved to {dataset_info_path}")
 
-DATASET_MAP = {
-    "credit_g": 31,
-    "vehicle": 53,
-    "kc1": 3917,
-    "phoneme": 9952,
-    "blood_transfusion": 10101,
-    "australian": 146818,
-    "car": 146821,
-    "segment": 146822,
-}
 
-data_dir = "dataset_info"
-generate_dataset_info(data_dir)
+if __name__ == "__main__":
+    data_dir = "dataset_info"
+    generate_dataset_info(data_dir)
