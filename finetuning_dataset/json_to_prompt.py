@@ -2,17 +2,14 @@ import os
 import json
 import csv
 
-
 HYPERPARAM_BOUNDS = {
     "rf": {"max_depth": (1, 50), "min_samples_split": (2, 128), "max_features": (0, 1.0), "min_samples_leaf": (1, 20)},
     "nn": {"depth": (1, 3), "width": (16, 1024), "batch_size": (4, 256), "alpha": (1e-8, 1.0), "learning_rate_init": (1e-5, 1.0)},
     "xgb": {"eta": (2**-10, 1.0), "max_depth": (1, 50), "colsample_bytree": (0.1, 1.0), "reg_lambda": (2**-10, 2**10)},
 }
 
-
-def extract_discriminative_prompt(json_data, dataset_name, model_tag):
+def extract_discriminative_prompt(json_data, dataset_info, model_tag):
     model_name = json_data["model_name"]
-    dataset_info = json_data["dataset_info"]
     task = json_data["task"]
     metric = json_data["metric"]
 
@@ -38,10 +35,8 @@ def extract_discriminative_prompt(json_data, dataset_name, model_tag):
     else:
         return None, None
 
-
-def extract_candidate_sampling_prompt(json_data, dataset_name, model_tag):
+def extract_candidate_sampling_prompt(json_data, dataset_info, model_tag):
     model_name = json_data["model_name"]
-    dataset_info = json_data["dataset_info"]
     task = json_data["task"]
     metric = json_data["metric"]
     hyperparam_bounds = HYPERPARAM_BOUNDS.get(model_tag)
@@ -70,13 +65,22 @@ def extract_candidate_sampling_prompt(json_data, dataset_name, model_tag):
     else:
         return None, None
 
-def generate_prompts(data_dir, output_folder):
+def generate_prompts(data_dir, dataset_info_dir, output_folder):
     os.makedirs(output_folder, exist_ok=True)
     
     for dataset_name in os.listdir(data_dir):
         dataset_path = os.path.join(data_dir, dataset_name)
         if not os.path.isdir(dataset_path):
             continue
+
+        # Load dataset info from the respective JSON file
+        dataset_info_path = os.path.join(dataset_info_dir, dataset_name, "dataset_info.json")
+        if not os.path.exists(dataset_info_path):
+            print(f"Dataset info for {dataset_name} not found. Skipping.")
+            continue
+
+        with open(dataset_info_path, "r") as f:
+            dataset_info = json.load(f)
 
         for model_name in os.listdir(dataset_path):
             model_path = os.path.join(dataset_path, model_name)
@@ -104,18 +108,19 @@ def generate_prompts(data_dir, output_folder):
                                 json_data = json.load(f)
 
                                 # Generate discriminative surrogate model prompts
-                                prompt_disc, response_disc = extract_discriminative_prompt(json_data, dataset_name, model_name)
+                                prompt_disc, response_disc = extract_discriminative_prompt(json_data, dataset_info, model_name)
                                 if prompt_disc and response_disc:
                                     csv_writer_disc.writerow([prompt_disc, response_disc])
 
                                 # Generate candidate sampling prompts
-                                prompt_cand, response_cand = extract_candidate_sampling_prompt(json_data, dataset_name, model_name)
+                                prompt_cand, response_cand = extract_candidate_sampling_prompt(json_data, dataset_info, model_name)
                                 if prompt_cand and response_cand:
                                     csv_writer_cand.writerow([prompt_cand, response_cand])
 
                 print(f"Discriminative prompts saved to {output_file_discriminative}")
                 print(f"Candidate sampling prompts saved to {output_file_candidate}")
 
-data_dir = "training_data"
+data_dir = "training_data_new"
+dataset_info_dir = "dataset_info"
 output_folder = "csv_output"
-generate_prompts(data_dir, output_folder)
+generate_prompts(data_dir, dataset_info_dir, output_folder)
