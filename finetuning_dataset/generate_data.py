@@ -1,15 +1,10 @@
 import os
 import json
 import openml
-from hpobench.benchmarks.ml import RandomForestBenchmark, NNBenchmark, XGBoostBenchmark
-from finetuning_dataset.xgb_benchmark import CustomXGBoostBenchmark
 from finetuning_dataset.utils import (
     MODEL_NAME_MAP, MODEL_BENCHMARK_MAP, DATASET_MAP, HYPERPARAM_BOUNDS
 )
 from bayes_opt import BayesianOptimization
-
-
-
 
 DATA_DIR = "training_data_new"
 

@@ -78,7 +78,8 @@ def extract_warmstarting_prompts(dataset_info, model_tag, exp_path):
 def main():
     dataset_info_path = "dataset_info"
     training_data_path = "training_data_new"
-    output_folder = "csv_output"
+    output_folder = "csv_output_X"
+    os.makedirs(output_folder, exist_ok=True)
 
     # Iterate through each dataset in the training_data_new directory
     for dataset_name in os.listdir(training_data_path):

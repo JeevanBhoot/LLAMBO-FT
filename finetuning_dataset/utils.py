@@ -1,3 +1,6 @@
+from hpobench.benchmarks.ml import RandomForestBenchmark, NNBenchmark
+from finetuning_dataset.xgb_benchmark import CustomXGBoostBenchmark
+
 MODEL_NAME_MAP = {
     "rf": "Random Forest",
     "nn": "Neural Network (Multi-Layer Perceptron)",
