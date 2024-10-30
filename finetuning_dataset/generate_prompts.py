@@ -124,7 +124,8 @@ def generate_prompts(data_dir, dataset_info_dir, output_folder):
                 print(f"Discriminative prompts saved to {output_file_discriminative}")
                 print(f"Candidate sampling prompts saved to {output_file_candidate}")
 
-data_dir = "training_data_new"
-dataset_info_dir = "dataset_info"
-output_folder = "csv_output"
-generate_prompts(data_dir, dataset_info_dir, output_folder)
+if __name__ == "__main__":
+    data_dir = "training_data_new"
+    dataset_info_dir = "dataset_info"
+    output_folder = "csv_output"
+    generate_prompts(data_dir, dataset_info_dir, output_folder)
