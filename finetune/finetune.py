@@ -72,7 +72,7 @@ def main():
         output_dir=output_dir,
         optim="paged_adamw_8bit",
         learning_rate=2e-4,
-        per_device_train_batch_size=2,
+        per_device_train_batch_size=1,
         gradient_accumulation_steps=16,
         lr_scheduler_type="cosine",
         save_strategy="epoch",
