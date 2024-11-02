@@ -43,6 +43,7 @@ def main():
 
     dataset = load_data_from_csv(data_dir)
 
+    #QLoRA
     quantization_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_compute_dtype=torch.float16,
@@ -67,13 +68,12 @@ def main():
     )
     model = get_peft_model(model, lora_config)
 
-    # Set training arguments
     training_args = TrainingArguments(
         output_dir=output_dir,
         optim="paged_adamw_8bit",
         learning_rate=2e-4,
         per_device_train_batch_size=2,
-        gradient_accumulation_steps=8,
+        gradient_accumulation_steps=16,
         lr_scheduler_type="cosine",
         save_strategy="epoch",
         num_train_epochs=5,
