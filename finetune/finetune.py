@@ -24,13 +24,14 @@ def load_data_from_csv(data_dir):
             df = pd.read_csv(file_path)
             data.append(df)
     df = pd.concat(data, ignore_index=True)
+    df.rename(columns={"response": "completion"}, inplace=True)
     return Dataset.from_pandas(df)
 
 
 def formatting_prompts_func(example):
     output_texts = []
     for i in range(len(example['prompt'])):
-        text = f"### Question: {example['prompt'][i]}\n ### Answer: {example['response'][i]}"
+        text = f"### Question:{example['prompt'][i]}\n### Answer:{example['response'][i]}"
         output_texts.append(text)
     return output_texts
 
@@ -38,7 +39,7 @@ def formatting_prompts_func(example):
 def main():
     data_dir = "./csv_output"
     model_id = "meta-llama/Meta-Llama-3-8B-Instruct"
-    output_dir = "./finetuned_llama/exp03"
+    output_dir = "./finetuned_llama/exp04"
 
     dataset = load_data_from_csv(data_dir)
 
@@ -71,8 +72,8 @@ def main():
         output_dir=output_dir,
         optim="paged_adamw_8bit",
         learning_rate=2e-4,
-        per_device_train_batch_size=1,
-        gradient_accumulation_steps=16,
+        per_device_train_batch_size=2,
+        gradient_accumulation_steps=8,
         lr_scheduler_type="cosine",
         save_strategy="epoch",
         num_train_epochs=5,
@@ -80,8 +81,8 @@ def main():
         report_to="tensorboard",
     )
 
-    response_template = " ### Answer:"
-    collator = DataCollatorForCompletionOnlyLM(response_template, tokenizer=tokenizer)
+    # response_template = "### Answer:"
+    # collator = DataCollatorForCompletionOnlyLM(response_template, tokenizer=tokenizer)
 
     trainer = SFTTrainer(
         model=model,
@@ -91,8 +92,8 @@ def main():
         tokenizer=tokenizer,
         dataset_text_field="text",
         packing=False,
-        formatting_func=formatting_prompts_func,
-        data_collator=collator,
+        # formatting_func=formatting_prompts_func,
+        # data_collator=collator,
         max_seq_length=512,
     )
 
