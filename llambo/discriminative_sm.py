@@ -7,12 +7,12 @@ import numpy as np
 from scipy.stats import norm
 from aiohttp import ClientSession
 from llambo.rate_limiter import RateLimiter
-from llambo.discriminative_sm_utils import gen_prompt_tempates
+from llambo.discriminative_sm_utils import gen_prompt_templates
 
 
-openai.api_type = os.environ["OPENAI_API_TYPE"]
-openai.api_version = os.environ["OPENAI_API_VERSION"]
-openai.api_base = os.environ["OPENAI_API_BASE"]
+# openai.api_type = os.environ["OPENAI_API_TYPE"]
+# openai.api_version = os.environ["OPENAI_API_VERSION"]
+# openai.api_base = os.environ["OPENAI_API_BASE"]
 openai.api_key = os.environ["OPENAI_API_KEY"]
 
 
@@ -69,7 +69,7 @@ class LLM_DIS_SM:
                     start_time = time.time()
                     self.rate_limiter.add_request(request_text=user_message, current_time=start_time)
                     resp = await openai.ChatCompletion.acreate(
-                        engine=self.chat_engine,
+                        model=self.chat_engine,
                         messages=message,
                         temperature=0.7,
                         max_tokens=8,
@@ -94,9 +94,7 @@ class LLM_DIS_SM:
 
         tot_tokens = resp['usage']['total_tokens']
         tot_cost = 0.0015*(resp['usage']['prompt_tokens']/1000) + 0.002*(resp['usage']['completion_tokens']/1000)
-
         return query_idx, resp, tot_cost, tot_tokens
-
 
 
     async def _generate_concurrently(self, few_shot_templates, query_examples):
@@ -195,7 +193,7 @@ class LLM_DIS_SM:
         all_run_cost += tot_cost
         all_run_time += time_taken
 
-        all_prompt_templates, query_examples = gen_prompt_tempates(self.task_context, observed_configs, observed_fvals, candidate_configs, 
+        all_prompt_templates, query_examples = gen_prompt_templates(self.task_context, observed_configs, observed_fvals, candidate_configs, 
                                                                     n_prompts=self.n_templates, bootstrapping=self.bootstrapping,
                                                                     use_context=use_context, use_feature_semantics=use_feature_semantics, 
                                                                     shuffle_features=self.shuffle_features, apply_warping=self.apply_warping)
@@ -230,7 +228,6 @@ class LLM_DIS_SM:
             with np.errstate(divide='ignore'):  # handle y_std=0 without warning
                 Z = delta/y_std
             ei = np.where(y_std>0, delta * norm.cdf(Z) + y_std * norm.pdf(Z), 0)
-
             return ei, y_mean, y_std, all_run_cost, all_run_time
 
     def select_query_point(self, observed_configs, observed_fvals, candidate_configs):
@@ -261,8 +258,5 @@ class LLM_DIS_SM:
             candidate_configs = self.warping_transformer.unwarp(candidate_configs)
 
         best_point = candidate_configs.iloc[[best_point_index], :]  # return selected point as dataframe not series
-
         return best_point, cost, time_taken
-
-
 

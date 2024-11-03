@@ -1,4 +1,5 @@
 from llambo.discriminative_sm import LLM_DIS_SM
+from llambo.discriminative_sm_hf import LLM_DIS_SM_HuggingFace
 from llambo.generative_sm import LLM_GEN_SM
 from llambo.acquisition_function import LLM_ACQ
 from llambo.rate_limiter import RateLimiter
@@ -74,6 +75,11 @@ class LLAMBO:
                                               n_templates=n_templates, rate_limiter=rate_limiter, 
                                               warping_transformer=warping_transformer,
                                               chat_engine=chat_engine, prompt_setting=prompt_setting, 
+                                              shuffle_features=shuffle_features)
+            self.surrogate_model = LLM_DIS_SM_HuggingFace(task_context, n_gens, lower_is_better, 
+                                              n_templates=n_templates, rate_limiter=rate_limiter, 
+                                              warping_transformer=warping_transformer,
+                                              prompt_setting=prompt_setting, 
                                               shuffle_features=shuffle_features)
             
         self.acq_func = LLM_ACQ(task_context, n_candidates, n_templates, lower_is_better, 

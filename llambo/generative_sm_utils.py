@@ -67,7 +67,7 @@ def prepare_configurations(
     return examples
 
 
-def gen_prompt_tempates(
+def gen_prompt_templates(
         task_context, 
         observed_configs, 
         observed_fvals, 

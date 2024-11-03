@@ -229,9 +229,9 @@ def obtain_dict_init(name_init, config_space, order_list, random_state = 0, num_
 
 def chat_gpt(input_text):
     # Set up OpenAI API parameters from environment variables
-    openai.api_type    = os.environ["OPENAI_API_TYPE"]
-    openai.api_version = os.environ["OPENAI_API_VERSION"]
-    openai.api_base    = os.environ["OPENAI_API_BASE"]
+    # openai.api_type    = os.environ["OPENAI_API_TYPE"]
+    # openai.api_version = os.environ["OPENAI_API_VERSION"]
+    # openai.api_base    = os.environ["OPENAI_API_BASE"]
     openai.api_key     = os.environ["OPENAI_API_KEY"]
     ENGINE             = os.environ["OPENAI_API_ENGINE"]
 
@@ -241,7 +241,7 @@ def chat_gpt(input_text):
     message.append({"role":"user", "content":input_text})
     # Request a chat completion from the OpenAI API with specified parameters
     resp = openai.ChatCompletion.create(
-        engine = ENGINE,
+        model = ENGINE,
         messages = message,
         temperature = 0.7,
         top_p = 0.95,

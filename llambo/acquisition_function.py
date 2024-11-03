@@ -11,9 +11,9 @@ from langchain import FewShotPromptTemplate
 from langchain import PromptTemplate
 from llambo.rate_limiter import RateLimiter
 
-openai.api_type = os.environ["OPENAI_API_TYPE"]
-openai.api_version = os.environ["OPENAI_API_VERSION"]
-openai.api_base = os.environ["OPENAI_API_BASE"]
+# openai.api_type = os.environ["OPENAI_API_TYPE"]
+# openai.api_version = os.environ["OPENAI_API_VERSION"]
+# openai.api_base = os.environ["OPENAI_API_BASE"]
 openai.api_key = os.environ["OPENAI_API_KEY"]
 
 
@@ -158,7 +158,7 @@ class LLM_ACQ:
         return examples
     
 
-    def _gen_prompt_tempates_acquisitions(
+    def _gen_prompt_templates_acquisitions(
         self,
         observed_configs, 
         observed_fvals, 
@@ -299,7 +299,7 @@ Hyperparameter configuration:"""
                     start_time = time.time()
                     self.rate_limiter.add_request(request_text=user_message, current_time=start_time)
                     resp = await openai.ChatCompletion.acreate(
-                        engine=self.chat_engine,
+                        model=self.chat_engine,
                         messages=message,
                         temperature=0.8,
                         max_tokens=500,
@@ -463,7 +463,7 @@ Hyperparameter configuration:"""
         if self.warping_transformer is not None:
             observed_configs = self.warping_transformer.warp(observed_configs)
 
-        prompt_templates, query_templates = self._gen_prompt_tempates_acquisitions(observed_configs, observed_fvals, desired_fval, n_prompts=self.n_templates, use_context=use_context, use_feature_semantics=use_feature_semantics, shuffle_features=self.shuffle_features)
+        prompt_templates, query_templates = self._gen_prompt_templates_acquisitions(observed_configs, observed_fvals, desired_fval, n_prompts=self.n_templates, use_context=use_context, use_feature_semantics=use_feature_semantics, shuffle_features=self.shuffle_features)
 
         print('='*100)
         print('EXAMPLE ACQUISITION PROMPT')

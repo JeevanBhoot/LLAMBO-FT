@@ -6,11 +6,11 @@ import numpy as np
 import pandas as pd
 from aiohttp import ClientSession
 from llambo.rate_limiter import RateLimiter
-from llambo.generative_sm_utils import gen_prompt_tempates
+from llambo.generative_sm_utils import gen_prompt_templates
 
-openai.api_type = os.environ["OPENAI_API_TYPE"]
-openai.api_version = os.environ["OPENAI_API_VERSION"]
-openai.api_base = os.environ["OPENAI_API_BASE"]
+# openai.api_type = os.environ["OPENAI_API_TYPE"]
+# openai.api_version = os.environ["OPENAI_API_VERSION"]
+# openai.api_base = os.environ["OPENAI_API_BASE"]
 openai.api_key = os.environ["OPENAI_API_KEY"]
 
 
@@ -159,7 +159,7 @@ class LLM_GEN_SM:
         all_run_cost = 0
         all_run_time = 0
 
-        all_prompt_templates, query_examples = gen_prompt_tempates(self.task_context, observed_configs, observed_fvals, candidate_configs, 
+        all_prompt_templates, query_examples = gen_prompt_templates(self.task_context, observed_configs, observed_fvals, candidate_configs, 
                                                                    self.lower_is_better, self.top_pct, n_prompts=self.n_templates)
         
         print('*'*100)
