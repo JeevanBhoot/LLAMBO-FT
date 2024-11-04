@@ -12,7 +12,7 @@ from llambo.discriminative_sm_utils import gen_prompt_templates
 
 class LLM_DIS_SM_HuggingFace:
     def __init__(self, task_context, n_gens, lower_is_better,
-                model_path="meta-llama/Meta-Llama-3-8B-Instruct",
+                model_path="hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4",
                 bootstrapping=False, n_templates=1, 
                 use_recalibration=False,
                 rate_limiter=None, warping_transformer=None,
@@ -94,8 +94,6 @@ class LLM_DIS_SM_HuggingFace:
             self.tokenizer.decode(output[input_ids.shape[-1]:], skip_special_tokens=True)
             for output in outputs
         ]
-        print(responses)
-        print(len(responses))
         return responses
 
     def _generate(self, few_shot_template, query_example):

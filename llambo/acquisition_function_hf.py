@@ -2,25 +2,21 @@ import os
 import random
 import math
 import time
-import openai
-import asyncio
+import torch
+import re
 import numpy as np
 import pandas as pd
-from aiohttp import ClientSession
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from langchain import FewShotPromptTemplate
 from langchain import PromptTemplate
 from llambo.rate_limiter import RateLimiter
 
-# openai.api_type = os.environ["OPENAI_API_TYPE"]
-# openai.api_version = os.environ["OPENAI_API_VERSION"]
-# openai.api_base = os.environ["OPENAI_API_BASE"]
-openai.api_key = os.environ["OPENAI_API_KEY"]
 
-
-class LLM_ACQ:
-    def __init__(self, task_context, n_candidates, n_templates, lower_is_better, 
-                 jitter=False, rate_limiter=None, warping_transformer=None, chat_engine=None, 
-                 prompt_setting=None, shuffle_features=False):
+class LLM_ACQ_HuggingFace:
+    def __init__(self, task_context, n_candidates, n_templates, lower_is_better,
+                model_path="hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4",
+                jitter=False, rate_limiter=None, warping_transformer=None,
+                verbose=False, prompt_setting=None, shuffle_features=False):
         '''Initialize the LLM Acquisition function.'''
         self.task_context = task_context
         self.n_candidates = n_candidates
@@ -29,7 +25,7 @@ class LLM_ACQ:
         self.lower_is_better = lower_is_better
         self.apply_jitter = jitter
         if rate_limiter is None:
-            self.rate_limiter = RateLimiter(max_tokens=40000, time_frame=60)
+            self.rate_limiter = RateLimiter(max_tokens=4000000, time_frame=60)
         else:
             self.rate_limiter = rate_limiter
         if warping_transformer is None:
@@ -38,12 +34,24 @@ class LLM_ACQ:
         else:
             self.warping_transformer = warping_transformer
             self.apply_warping = True
-        self.chat_engine = chat_engine
         self.prompt_setting = prompt_setting
         self.shuffle_features = shuffle_features
 
         assert type(self.shuffle_features) == bool, 'shuffle_features must be a boolean'
 
+        self.model, self.tokenizer = self.load_model(model_path)
+
+    def load_model(self, model_path):
+        '''Load the Huggingface model.'''
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            trust_remote_code=True,
+            device_map="auto",
+            torch_dtype=torch.bfloat16,
+        )
+        tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True)
+
+        return model, tokenizer
 
     def _jitter(self, desired_fval):
         '''Add jitter to observed fvals to prevent duplicates.'''
@@ -60,7 +68,6 @@ class LLM_ACQ:
                                         size=1).item()
 
         return jittered
-
 
     def _count_decimal_places(self, n):
         '''Count the number of decimal places in a number.'''
@@ -282,73 +289,63 @@ Hyperparameter configuration:"""
 
         return all_prompt_templates, all_query_templates
     
-    async def _async_generate(self, user_message):
-        '''Generate a response from the LLM async.'''
-        message = []
-        message.append({"role": "system","content": "You are an AI assistant that helps people find information."})
-        message.append({"role": "user", "content": user_message})
 
-        MAX_RETRIES = 3
+    def _generate_response(self, input_text, n_preds=3):
+        '''Generate response from the Huggingface model.'''
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are an AI assistant that helps people find information."
+                ),
+            },
+            {"role": "user", "content": input_text},
+        ]
 
-        async with ClientSession(trust_env=True) as session:
-            openai.aiosession.set(session)
+        input_ids = self.tokenizer.apply_chat_template(
+            messages, add_generation_prompt=True, return_tensors="pt"
+        ).to(self.model.device)
 
-            resp = None
-            for retry in range(MAX_RETRIES):
+        terminators = [
+            self.tokenizer.eos_token_id,
+            self.tokenizer.convert_tokens_to_ids("<|eot_id|>"),
+        ]
+
+        outputs = []
+        for _ in range(n_preds):
+            outputs.extend(self.model.generate(
+                input_ids,
+                max_new_tokens=100,
+                eos_token_id=terminators,
+                do_sample=True,
+                temperature=0.8,
+                top_p=0.95,
+                pad_token_id=self.tokenizer.eos_token_id,
+            ))
+
+        responses = [
+            self.tokenizer.decode(output[input_ids.shape[-1]:], skip_special_tokens=True)
+            for output in outputs
+        ]
+        return responses
+
+    def _generate(self, prompt_template, query_template):
+        '''Generate multiple responses from the Huggingface model for Monte Carlo approach.'''
+        user_message = prompt_template.format(A=query_template[0]['A'])
+        responses = self._generate_response(user_message, n_preds=max(self.n_gens, 3))
+
+        # Extract configurations from responses using regex
+        candidate_points = []
+        for response in responses:
+            match = re.findall(r"## (.*?) ##", response)
+            if match:
                 try:
-                    start_time = time.time()
-                    self.rate_limiter.add_request(request_text=user_message, current_time=start_time)
-                    resp = await openai.ChatCompletion.acreate(
-                        model=self.chat_engine,
-                        messages=message,
-                        temperature=0.8,
-                        max_tokens=500,
-                        top_p=0.95,
-                        n=self.n_gens,
-                        request_timeout=10
-                    )
-                    self.rate_limiter.add_request(request_token_count=resp['usage']['total_tokens'], current_time=start_time)
-                    break
-                except Exception as e:
-                    print(f'[AF] RETRYING LLM REQUEST {retry+1}/{MAX_RETRIES}...')
-                    print(resp)
-                    print(e)
+                    candidate_points.append(self._convert_to_json(match[-1]))
+                except ValueError:
+                    continue
 
-        await openai.aiosession.get().close()
+        return candidate_points
 
-        if resp is None:
-            return None
-
-        tot_tokens = resp['usage']['total_tokens']
-        tot_cost = 0.0015*(resp['usage']['prompt_tokens']/1000) + 0.002*(resp['usage']['completion_tokens']/1000)
-
-        return resp, tot_cost, tot_tokens
-
-
-    async def _async_generate_concurrently(self, prompt_templates, query_templates):
-        '''Perform concurrent generation of responses from the LLM async.'''
-
-        coroutines = []
-        for (prompt_template, query_template) in zip(prompt_templates, query_templates):
-            coroutines.append(self._async_generate(prompt_template.format(A=query_template[0]['A'])))
-
-        # coroutines = [self._async_generate(prompt_template.format(A=query_example['A'])) for prompt_template in prompt_templates]
-        tasks = [asyncio.create_task(c) for c in coroutines]
-
-        # assert len(tasks) == int(self.n_candidates/self.n_gens)
-        assert len(tasks) == int(self.n_templates)
-
-        results = [None]*len(coroutines)
-
-        llm_response = await asyncio.gather(*tasks)
-
-        for idx, response in enumerate(llm_response):
-            if response is not None:
-                resp, tot_cost, tot_tokens = response
-                results[idx] = (resp, tot_cost, tot_tokens)
-
-        return results  # format [(resp, tot_cost, tot_tokens), None, (resp, tot_cost, tot_tokens)]
-    
     def _convert_to_json(self, response_str):
         '''Parse LLM response string into JSON.'''
         pairs = response_str.split(',')
@@ -477,26 +474,10 @@ Hyperparameter configuration:"""
 
         retry = 0
         while number_candidate_points < 5:
-            llm_responses = asyncio.run(self._async_generate_concurrently(prompt_templates, query_templates))
-
             candidate_points = []
-            tot_cost = 0
-            tot_tokens = 0
-            # loop through n_coroutine async calls
-            for response in llm_responses:
-                if response is None:
-                    continue
-                # loop through n_gen responses
-                for response_message in response[0]['choices']:
-                        response_content = response_message['message']['content']
-                        try:
-                            response_content = response_content.split('##')[1].strip()
-                            candidate_points.append(self._convert_to_json(response_content))
-                        except:
-                            print(response_content)
-                            continue
-                tot_cost += response[1]
-                tot_tokens += response[2]
+            for i, query in enumerate(query_templates):
+                for template in prompt_templates:
+                    candidate_points.extend(self._generate(template, query))
 
             proposed_points = self._filter_candidate_points(observed_configs.to_dict(orient='records'), candidate_points)
             filtered_candidate_points = pd.concat([filtered_candidate_points, proposed_points], ignore_index=True)
@@ -516,12 +497,12 @@ Hyperparameter configuration:"""
                     break
                 else:
                     raise Exception('LLM failed to generate candidate points')
-        breakpoint()
+
         if self.warping_transformer is not None:
             filtered_candidate_points = self.warping_transformer.unwarp(filtered_candidate_points)
 
 
         end_time = time.time()
         time_taken = end_time - start_time
-
+        tot_cost = 0
         return filtered_candidate_points, tot_cost, time_taken

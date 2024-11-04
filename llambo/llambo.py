@@ -2,6 +2,7 @@ from llambo.discriminative_sm import LLM_DIS_SM
 from llambo.discriminative_sm_hf import LLM_DIS_SM_HuggingFace
 from llambo.generative_sm import LLM_GEN_SM
 from llambo.acquisition_function import LLM_ACQ
+from llambo.acquisition_function_hf import LLM_ACQ_HuggingFace
 from llambo.rate_limiter import RateLimiter
 from llambo.warping import NumericalTransformer
 import pandas as pd
@@ -86,6 +87,9 @@ class LLAMBO:
                                 rate_limiter=rate_limiter, warping_transformer=warping_transformer, 
                                 chat_engine=chat_engine, prompt_setting=prompt_setting, 
                                 shuffle_features=shuffle_features)
+        self.acq_func = LLM_ACQ_HuggingFace(task_context, n_candidates, n_templates, lower_is_better, 
+            rate_limiter=rate_limiter, warping_transformer=warping_transformer, 
+            prompt_setting=prompt_setting, shuffle_features=shuffle_features)
 
 
     def _initialize(self):
