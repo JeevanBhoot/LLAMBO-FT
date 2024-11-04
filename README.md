@@ -51,3 +51,7 @@ pip install -r requirements.txt
 
 ## 2. Reproducing Results
 
+To generate the training data for finetuning, run:
+```bash
+./generate_training_data.sh
+```
