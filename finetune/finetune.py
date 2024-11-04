@@ -1,10 +1,34 @@
+import argparse
 import os
 import pandas as pd
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, BitsAndBytesConfig
 from peft import LoraConfig, get_peft_model
-from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
+from trl import SFTTrainer
 from datasets import Dataset
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Script for finetuning Llama model using LoRA and QLoRA.")
+    parser.add_argument(
+        "--data_dir", 
+        type=str, 
+        default="training_data/csv"
+        help="Directory containing CSV files with training data."
+    )
+    parser.add_argument(
+        "--model_id", 
+        type=str, 
+        default="meta-llama/Meta-Llama-3-8B-Instruct", 
+        help="HuggingFace model path"
+    )
+    parser.add_argument(
+        "--output_dir", 
+        type=str, 
+        required=True, 
+        help="Directory to store the finetuned model."
+    )
+    return parser.parse_args()
 
 
 def load_data_from_csv(data_dir):
@@ -28,18 +52,11 @@ def load_data_from_csv(data_dir):
     return Dataset.from_pandas(df)
 
 
-def formatting_prompts_func(example):
-    output_texts = []
-    for i in range(len(example['prompt'])):
-        text = f"### Question:{example['prompt'][i]}\n### Answer:{example['response'][i]}"
-        output_texts.append(text)
-    return output_texts
-
-
-def main():
-    data_dir = "./csv_output"
-    model_id = "meta-llama/Meta-Llama-3-8B-Instruct"
-    output_dir = "./finetuned_llama/exp04"
+def main(args):
+    args = parse_args()
+    data_dir = args.data_dir
+    model_id = args.model_id
+    output_dir = args.output_dir
 
     dataset = load_data_from_csv(data_dir)
 
@@ -81,9 +98,6 @@ def main():
         report_to="tensorboard",
     )
 
-    # response_template = "### Answer:"
-    # collator = DataCollatorForCompletionOnlyLM(response_template, tokenizer=tokenizer)
-
     trainer = SFTTrainer(
         model=model,
         args=training_args,
@@ -92,8 +106,6 @@ def main():
         tokenizer=tokenizer,
         dataset_text_field="text",
         packing=False,
-        # formatting_func=formatting_prompts_func,
-        # data_collator=collator,
         max_seq_length=512,
     )
 
@@ -103,4 +115,5 @@ def main():
     tokenizer.save_pretrained(f"{output_dir}/final_model")
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(args)

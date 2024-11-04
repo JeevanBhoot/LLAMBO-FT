@@ -55,3 +55,8 @@ To generate the training data for finetuning, run:
 ```bash
 ./generate_training_data.sh
 ```
+
+To finetune Llama3-8B-Instruct on the generated data using QLoRA, run:
+```bash
+python finetune/finetune.py --output_dir=/path/to/finetuned/model
+```
