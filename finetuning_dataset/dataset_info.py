@@ -3,8 +3,20 @@ import json
 import openml
 import numpy as np
 import pandas as pd
+import argparse
 from collections import Counter
 from finetuning_dataset.utils import DATASET_MAP, DATASET_OUT_DOMAIN_MAP
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Script for generating dataset information.")
+    parser.add_argument(
+        "--data_dir", 
+        type=str, 
+        default="dataset_info_out_domain", 
+        help="Directory to store the generated dataset information."
+    )
+    return parser.parse_args()
 
 
 def get_dataset_info(task_id):
@@ -76,5 +88,5 @@ def generate_dataset_info(data_dir):
 
 
 if __name__ == "__main__":
-    data_dir = "dataset_info_out_domain"
-    generate_dataset_info(data_dir)
+    args = parse_args()
+    generate_dataset_info(args.data_dir)

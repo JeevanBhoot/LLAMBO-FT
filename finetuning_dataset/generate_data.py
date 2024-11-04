@@ -1,6 +1,7 @@
 import os
 import json
 import openml
+import argparse
 from finetuning_dataset.utils import (
     MODEL_NAME_MAP, MODEL_BENCHMARK_MAP, DATASET_MAP, DATASET_OUT_DOMAIN_MAP, HYPERPARAM_BOUNDS
 )
@@ -131,8 +132,7 @@ def generate_training_data(model_name, task_id, dataset_name, data_dir, num_expt
 
 if __name__ == "__main__":
     args = parse_args()
-    data_dir = args.data_dir
     for dataset_name, task_id in DATASET_MAP.items():
         for model in MODEL_BENCHMARK_MAP.keys():
-            os.makedirs(f"{data_dir}/{dataset_name}/{model}", exist_ok=True)
-            generate_training_data(model, task_id, dataset_name, data_dir)
+            os.makedirs(f"{args.data_dir}/{dataset_name}/{model}", exist_ok=True)
+            generate_training_data(model, task_id, dataset_name, args.data_dir)
