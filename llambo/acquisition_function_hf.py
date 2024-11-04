@@ -10,6 +10,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from langchain import FewShotPromptTemplate
 from langchain import PromptTemplate
 from llambo.rate_limiter import RateLimiter
+from peft import PeftModel
 
 
 class LLM_ACQ_HuggingFace:
@@ -50,6 +51,8 @@ class LLM_ACQ_HuggingFace:
             torch_dtype=torch.bfloat16,
             load_in_4bit=True,
         )
+        model = PeftModel.from_pretrained(model, "finetuned_llama/exp04/checkpoint-1350")
+        model.merge_and_unload()
         tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True)
 
         return model, tokenizer

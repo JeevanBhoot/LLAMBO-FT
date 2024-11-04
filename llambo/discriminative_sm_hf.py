@@ -7,6 +7,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from llambo.rate_limiter import RateLimiter
 from llambo.discriminative_sm_utils import gen_prompt_templates
+from peft import PeftModel
 
 
 class LLM_DIS_SM_HuggingFace:
@@ -53,6 +54,8 @@ class LLM_DIS_SM_HuggingFace:
             torch_dtype=torch.bfloat16,
             load_in_4bit=True,
         )
+        model = PeftModel.from_pretrained(model, "finetuned_llama/exp04/checkpoint-1350")
+        model.merge_and_unload()
         tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True)
 
         return model, tokenizer
