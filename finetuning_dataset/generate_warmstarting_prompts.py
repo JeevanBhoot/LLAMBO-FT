@@ -2,6 +2,7 @@ import os
 import json
 import csv
 from finetuning_dataset.utils import HYPERPARAM_BOUNDS
+from finetuning_dataset.generate_prompts import parse_args
 
 
 def extract_warmstarting_prompts(dataset_info, model_tag, exp_path):
@@ -75,20 +76,20 @@ def extract_warmstarting_prompts(dataset_info, model_tag, exp_path):
 
     return warmstarting_prompts
 
-def main():
-    dataset_info_path = "dataset_info"
-    training_data_path = "training_data_new"
-    output_folder = "csv_output_X"
-    os.makedirs(output_folder, exist_ok=True)
+def main(args):
+    data_dir = args.data_dir
+    dataset_info_dir = args.dataset_info_dir
+    output_dir = args.output_dir
+    os.makedirs(output_dir, exist_ok=True)
 
     # Iterate through each dataset in the training_data_new directory
-    for dataset_name in os.listdir(training_data_path):
-        dataset_dir = os.path.join(training_data_path, dataset_name)
+    for dataset_name in os.listdir(data_dir):
+        dataset_dir = os.path.join(data_dir, dataset_name)
         if not os.path.isdir(dataset_dir):
             continue
 
         # Load the corresponding dataset_info.json file
-        dataset_info_file = os.path.join(dataset_info_path, dataset_name, "dataset_info.json")
+        dataset_info_file = os.path.join(dataset_info_dir, dataset_name, "dataset_info.json")
         if not os.path.exists(dataset_info_file):
             print(f"Dataset info file not found for {dataset_name}, skipping...")
             continue
@@ -103,7 +104,7 @@ def main():
                 continue
 
             # Define unique CSV file for each (dataset, model) pair
-            output_csv_file = os.path.join(output_folder, f"{dataset_name}_{model_tag}_warmstarting.csv")
+            output_csv_file = os.path.join(output_dir, f"{dataset_name}_{model_tag}_warmstarting.csv")
 
             # Open CSV file for writing prompts and recommendations
             with open(output_csv_file, mode="w", newline="") as csv_file:
@@ -128,4 +129,5 @@ def main():
                         })
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(args)
