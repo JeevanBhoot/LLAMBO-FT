@@ -4,7 +4,7 @@ Built on top of [LLAMBO](https://github.com/tennisonliu/LLAMBO/).
 
 ## 1. Setup
 
-1. If using OpenAI, set up environment variables:
+1. If using OpenAI for original LLAMBO, set up environment variables:
 
 ```
 echo "export OPENAI_API_KEY={api_key}" >> ~/.zshrc
