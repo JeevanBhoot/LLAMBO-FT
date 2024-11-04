@@ -9,7 +9,6 @@ from llambo.rate_limiter import RateLimiter
 from llambo.discriminative_sm_utils import gen_prompt_templates
 
 
-
 class LLM_DIS_SM_HuggingFace:
     def __init__(self, task_context, n_gens, lower_is_better,
                 model_path="meta-llama/Meta-Llama-3-8B-Instruct",
