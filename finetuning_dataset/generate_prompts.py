@@ -119,7 +119,7 @@ def generate_prompts(data_dir, dataset_info_dir, output_folder):
                 print(f"Candidate sampling prompts saved to {output_file_candidate}")
 
 if __name__ == "__main__":
-    data_dir = "training_data_new"
+    data_dir = "valid_data_json"
     dataset_info_dir = "dataset_info"
-    output_folder = "csv_output"
+    output_folder = "valid_data_csv"
     generate_prompts(data_dir, dataset_info_dir, output_folder)

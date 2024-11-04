@@ -52,7 +52,7 @@ def main():
     validation_data_dir = "valid_data_csv/"
 
     model = AutoModelForCausalLM.from_pretrained(model_path, trust_remote_code=True, device_map="auto", torch_dtype=torch.bfloat16)
-    model = PeftModel.from_pretrained(model, "finetuned_llama/exp04/checkpoint-450")
+    model = PeftModel.from_pretrained(model, "finetuned_llama/exp04/checkpoint-1350")
     model.merge_and_unload()
     tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True)
 
@@ -74,7 +74,7 @@ def main():
                 if predicted_value is not None and true_value is not None:
                     predicted_values.append(predicted_value)
                     true_values.append(true_value)
-
+    print(len(true_values), len(predicted_values))
     mse = mean_squared_error(true_values, predicted_values)
     print(f"Mean Squared Error: {mse}")
 

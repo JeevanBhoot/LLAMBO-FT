@@ -6,7 +6,7 @@ from finetuning_dataset.utils import (
 )
 from bayes_opt import BayesianOptimization
 
-DATA_DIR = "training_data_new"
+DATA_DIR = "valid_data_json"
 
 
 def hyps_to_int(config: dict, model_name: str):
@@ -32,7 +32,7 @@ def evaluate_metrics(benchmark, config, model_name):
     }
 
 
-def generate_training_data(model_name, task_id, dataset_name, num_expts=5, n_trials=25, n_initial_points=5):
+def generate_training_data(model_name, task_id, dataset_name, num_expts=3, n_trials=25, n_initial_points=5):
     # Initialize benchmark for the specific model and dataset
     benchmark_class = MODEL_BENCHMARK_MAP[model_name]
     benchmark = benchmark_class(task_id=task_id)
