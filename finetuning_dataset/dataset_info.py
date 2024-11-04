@@ -13,7 +13,7 @@ def parse_args():
     parser.add_argument(
         "--data_dir", 
         type=str, 
-        default="dataset_info_out_domain", 
+        default="training_data/dataset_info", 
         help="Directory to store the generated dataset information."
     )
     return parser.parse_args()
