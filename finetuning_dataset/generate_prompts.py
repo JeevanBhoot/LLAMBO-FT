@@ -1,7 +1,31 @@
+import argparse
 import os
 import json
 import csv
 from finetuning_dataset.utils import HYPERPARAM_BOUNDS
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Script for generating training prompts from dataset information.")
+    parser.add_argument(
+        "--data_dir", 
+        type=str, 
+        default="training_data/json", 
+        help="Directory containing the training data in JSON format."
+    )
+    parser.add_argument(
+        "--dataset_info_dir", 
+        type=str, 
+        default="training_data/dataset_info", 
+        help="Directory containing dataset information JSON files."
+    )
+    parser.add_argument(
+        "--output_dir", 
+        type=str, 
+        default="training_data/csv", 
+        help="Directory to store the generated CSV files containing prompts."
+    )
+    return parser.parse_args()
 
 
 def extract_discriminative_prompt(json_data, dataset_info, model_tag):
@@ -63,8 +87,12 @@ def extract_candidate_sampling_prompt(json_data, dataset_info, model_tag):
         return None, None
 
 
-def generate_prompts(data_dir, dataset_info_dir, output_folder):
-    os.makedirs(output_folder, exist_ok=True)
+def generate_prompts(args):
+    data_dir = args.data_dir
+    dataset_info_dir = args.dataset_info_dir
+    output_dir = args.output_dir
+
+    os.makedirs(output_dir, exist_ok=True)
     
     for dataset_name in os.listdir(data_dir):
         dataset_path = os.path.join(data_dir, dataset_name)
@@ -85,8 +113,8 @@ def generate_prompts(data_dir, dataset_info_dir, output_folder):
             if not os.path.isdir(model_path):
                 continue
 
-            output_file_discriminative = os.path.join(output_folder, f"{dataset_name}_{model_name}_discriminative_training_data.csv")
-            output_file_candidate = os.path.join(output_folder, f"{dataset_name}_{model_name}_candidate_training_data.csv")
+            output_file_discriminative = os.path.join(output_dir, f"{dataset_name}_{model_name}_discriminative_training_data.csv")
+            output_file_candidate = os.path.join(output_dir, f"{dataset_name}_{model_name}_candidate_training_data.csv")
 
             with open(output_file_discriminative, "w", newline="") as out_f_disc, open(output_file_candidate, "w", newline="") as out_f_cand:
                 csv_writer_disc = csv.writer(out_f_disc)
@@ -119,7 +147,5 @@ def generate_prompts(data_dir, dataset_info_dir, output_folder):
                 print(f"Candidate sampling prompts saved to {output_file_candidate}")
 
 if __name__ == "__main__":
-    data_dir = "valid_data_out-domain_json"
-    dataset_info_dir = "dataset_info_out_domain"
-    output_folder = "valid_data_out-domain_csv"
-    generate_prompts(data_dir, dataset_info_dir, output_folder)
+    args = parse_args()
+    generate_prompts(args)
