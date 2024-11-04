@@ -4,7 +4,7 @@ import openml
 import numpy as np
 import pandas as pd
 from collections import Counter
-from finetuning_dataset.utils import DATASET_MAP
+from finetuning_dataset.utils import DATASET_MAP, DATASET_OUT_DOMAIN_MAP
 
 
 def get_dataset_info(task_id):
@@ -62,11 +62,11 @@ def get_dataset_info(task_id):
 def generate_dataset_info(data_dir):
     os.makedirs(data_dir, exist_ok=True)
 
-    for dataset_name in DATASET_MAP.keys():
+    for dataset_name in DATASET_OUT_DOMAIN_MAP.keys():
         dataset_info_path = os.path.join(data_dir, dataset_name, "dataset_info.json")
         os.makedirs(os.path.join(data_dir, dataset_name), exist_ok=True)
 
-        task_id = DATASET_MAP[dataset_name]
+        task_id = DATASET_OUT_DOMAIN_MAP[dataset_name]
         dataset_info = get_dataset_info(task_id)
 
         with open(dataset_info_path, 'w') as f:
@@ -76,5 +76,5 @@ def generate_dataset_info(data_dir):
 
 
 if __name__ == "__main__":
-    data_dir = "dataset_info"
+    data_dir = "dataset_info_out_domain"
     generate_dataset_info(data_dir)

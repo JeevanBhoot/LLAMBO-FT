@@ -2,11 +2,11 @@ import os
 import json
 import openml
 from finetuning_dataset.utils import (
-    MODEL_NAME_MAP, MODEL_BENCHMARK_MAP, DATASET_MAP, HYPERPARAM_BOUNDS
+    MODEL_NAME_MAP, MODEL_BENCHMARK_MAP, DATASET_MAP, DATASET_OUT_DOMAIN_MAP, HYPERPARAM_BOUNDS
 )
 from bayes_opt import BayesianOptimization
 
-DATA_DIR = "valid_data_json"
+DATA_DIR = "valid_data_out-domain_json"
 
 
 def hyps_to_int(config: dict, model_name: str):
@@ -121,7 +121,7 @@ def generate_training_data(model_name, task_id, dataset_name, num_expts=3, n_tri
 
 
 if __name__ == "__main__":
-    for dataset_name, task_id in DATASET_MAP.items():
+    for dataset_name, task_id in DATASET_OUT_DOMAIN_MAP.items():
         for model in MODEL_BENCHMARK_MAP.keys():
             os.makedirs(f"{DATA_DIR}/{dataset_name}/{model}", exist_ok=True)
             generate_training_data(model, task_id, dataset_name)
