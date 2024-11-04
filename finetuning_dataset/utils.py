@@ -24,6 +24,12 @@ DATASET_MAP = {
     "segment": 146822,
 }
 
+DATASET_OUT_DOMAIN_MAP = {
+    "diabetes": 37,
+    "spambase": 43,
+    "tic_tac_toe": 145804,
+}
+
 HYPERPARAM_BOUNDS = {
     "rf": {"max_depth": (1, 50), "min_samples_split": (2, 128), "max_features": (0, 1.0), "min_samples_leaf": (1, 20)},
     "nn": {"depth": (1, 3), "width": (16, 1024), "batch_size": (4, 256), "alpha": (1e-8, 1.0), "learning_rate_init": (1e-5, 1.0)},
