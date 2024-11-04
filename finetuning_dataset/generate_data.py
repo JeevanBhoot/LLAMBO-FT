@@ -6,7 +6,16 @@ from finetuning_dataset.utils import (
 )
 from bayes_opt import BayesianOptimization
 
-DATA_DIR = "valid_data_out-domain_json"
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Script for generating training data using Bayesian Optimization.")
+    parser.add_argument(
+        "--data_dir", 
+        type=str, 
+        default="training_data/json", 
+        help="Directory to store the generated training data."
+    )
+    return parser.parse_args()
 
 
 def hyps_to_int(config: dict, model_name: str):
@@ -32,7 +41,7 @@ def evaluate_metrics(benchmark, config, model_name):
     }
 
 
-def generate_training_data(model_name, task_id, dataset_name, num_expts=3, n_trials=25, n_initial_points=5):
+def generate_training_data(model_name, task_id, dataset_name, data_dir, num_expts=3, n_trials=25, n_initial_points=5):
     # Initialize benchmark for the specific model and dataset
     benchmark_class = MODEL_BENCHMARK_MAP[model_name]
     benchmark = benchmark_class(task_id=task_id)
@@ -40,7 +49,7 @@ def generate_training_data(model_name, task_id, dataset_name, num_expts=3, n_tri
     pbounds = HYPERPARAM_BOUNDS[model_name]
 
     for j in range(num_expts):
-        os.makedirs(f"{DATA_DIR}/{dataset_name}/{model_name}/exp0{j+1}", exist_ok=True)
+        os.makedirs(f"{data_dir}/{dataset_name}/{model_name}/exp0{j+1}", exist_ok=True)
 
         bo = BayesianOptimization(
             f=lambda **params: benchmark.objective_function({
@@ -88,7 +97,7 @@ def generate_training_data(model_name, task_id, dataset_name, num_expts=3, n_tri
                 "current_hyperparameters": config,
                 "current_performance": optimization_history[i]["performance"],
             }
-            with open(f"{DATA_DIR}/{dataset_name}/{model_name}/exp0{j+1}/initial_step_{i}.json", "w") as f:
+            with open(f"{data_dir}/{dataset_name}/{model_name}/exp0{j+1}/initial_step_{i}.json", "w") as f:
                 json.dump(step_data, f, indent=4)
 
         # Save jsons for steps after initial points
@@ -116,12 +125,14 @@ def generate_training_data(model_name, task_id, dataset_name, num_expts=3, n_tri
             }
 
             # Save generated data to JSON file for each step
-            with open(f"{DATA_DIR}/{dataset_name}/{model_name}/exp0{j+1}/step_{step_num}.json", "w") as f:
+            with open(f"{data_dir}/{dataset_name}/{model_name}/exp0{j+1}/step_{step_num}.json", "w") as f:
                 json.dump(step_data, f, indent=4)
 
 
 if __name__ == "__main__":
-    for dataset_name, task_id in DATASET_OUT_DOMAIN_MAP.items():
+    args = parse_args()
+    data_dir = args.data_dir
+    for dataset_name, task_id in DATASET_MAP.items():
         for model in MODEL_BENCHMARK_MAP.keys():
-            os.makedirs(f"{DATA_DIR}/{dataset_name}/{model}", exist_ok=True)
-            generate_training_data(model, task_id, dataset_name)
+            os.makedirs(f"{data_dir}/{dataset_name}/{model}", exist_ok=True)
+            generate_training_data(model, task_id, dataset_name, data_dir)
