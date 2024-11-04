@@ -14,7 +14,7 @@ from llambo.rate_limiter import RateLimiter
 
 class LLM_ACQ_HuggingFace:
     def __init__(self, task_context, n_candidates, n_templates, lower_is_better,
-                model_path="hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4",
+                model_path="meta-llama/Meta-Llama-3-8B-Instruct",
                 jitter=False, rate_limiter=None, warping_transformer=None,
                 verbose=False, prompt_setting=None, shuffle_features=False):
         '''Initialize the LLM Acquisition function.'''
@@ -48,6 +48,7 @@ class LLM_ACQ_HuggingFace:
             trust_remote_code=True,
             device_map="auto",
             torch_dtype=torch.bfloat16,
+            load_in_4bit=True,
         )
         tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True)
 

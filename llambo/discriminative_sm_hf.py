@@ -12,7 +12,7 @@ from llambo.discriminative_sm_utils import gen_prompt_templates
 
 class LLM_DIS_SM_HuggingFace:
     def __init__(self, task_context, n_gens, lower_is_better,
-                model_path="hugging-quants/Meta-Llama-3.1-8B-Instruct-GPTQ-INT4",
+                model_path="meta-llama/Meta-Llama-3-8B-Instruct",
                 bootstrapping=False, n_templates=1, 
                 use_recalibration=False,
                 rate_limiter=None, warping_transformer=None,
@@ -52,6 +52,7 @@ class LLM_DIS_SM_HuggingFace:
             trust_remote_code=True,
             device_map="auto",
             torch_dtype=torch.bfloat16,
+            load_in_4bit=True,
         )
         tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True)
 
